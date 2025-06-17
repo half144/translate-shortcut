@@ -8,31 +8,60 @@ class Config:
         self.config_file = "translator_config.json"
         self.openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
         self.model = "openai/gpt-4.1-nano"
-        self.api_key = self.load_api_key()
+        self.languages = {
+            "English": "english",
+            "Español": "spanish", 
+            "Français": "french",
+            "Deutsch": "german",
+        }
+        config_data = self.load_config()
+        self.api_key = config_data.get('api_key', '')
+        self.target_language = config_data.get('target_language', 'english')
     
-    def load_api_key(self):
+    def load_config(self):
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
-                    config_data = json.load(f)
-                    return config_data.get('api_key', '')
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
         except Exception:
             pass
-        return ''
+        return {}
     
-    def save_api_key(self, api_key):
+    def load_api_key(self):
+        config_data = self.load_config()
+        return config_data.get('api_key', '')
+    
+    def save_config(self, api_key=None, target_language=None):
         try:
-            config_data = {'api_key': api_key}
-            with open(self.config_file, 'w') as f:
-                json.dump(config_data, f)
-            self.api_key = api_key
+            config_data = self.load_config()
+            if api_key is not None:
+                config_data['api_key'] = api_key
+                self.api_key = api_key
+            if target_language is not None:
+                config_data['target_language'] = target_language
+                self.target_language = target_language
+            
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, ensure_ascii=False, indent=2)
             return True
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar configuração: {str(e)}")
             return False
     
+    def save_api_key(self, api_key):
+        return self.save_config(api_key=api_key)
+    
     def get_api_key(self):
         return self.api_key
+    
+    def get_target_language(self):
+        return self.target_language
+    
+    def set_target_language(self, language):
+        return self.save_config(target_language=language)
+    
+    def get_available_languages(self):
+        return self.languages
     
     def setup_api_key(self):
         root = tk.Tk()
@@ -63,6 +92,7 @@ class Config:
             if os.path.exists(self.config_file):
                 os.remove(self.config_file)
             self.api_key = ''
+            self.target_language = 'english'
             return True
         except Exception:
             return False 

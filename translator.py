@@ -3,8 +3,8 @@ import json
 from config import Config
 
 class Translator:
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, config=None):
+        self.config = config if config is not None else Config()
     
     def translate_text(self, text):
         if not text.strip():
@@ -14,6 +14,10 @@ class Translator:
         if not api_key:
             raise Exception("API key not configured")
         
+        target_language = self.config.get_target_language()
+
+        print(f"Target language: {target_language}")
+        
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -21,12 +25,14 @@ class Translator:
             "X-Title": "Text Translator MVP"
         }
         
-        prompt = (f"translate the following portuguese text to english, "
-                 f"keeping all slang, expressions, and informal tone intact. "
-                 f"preserve the original capitalization and formatting. !important"
-                 f"only output a json object "
-                 f"in the format: {{'translation': your translated text here}}: {text}")
-        
+        prompt = (f"Translate the following portuguese text to {target_language}. "
+                 f"Rules: "
+                 f"1. Preserve slang, expressions, and informal tone exactly as they are "
+                 f"2. Maintain original capitalization, punctuation, and formatting "
+                 f"3. Keep the natural flow and style of the original text "
+                 f"4. If certain expressions don't translate well, use equivalent expressions in {target_language} !important"
+                 f"5. ONLY respond with a JSON object in this exact format: {{'translation': 'your translated text here'}} "
+                 f"\nText to translate: {text}")
         return self._make_request(headers, prompt, "translation")
     
     def fix_text(self, text):

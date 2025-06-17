@@ -11,8 +11,8 @@ from datetime import datetime
 
 class TextTranslatorApp:
     def __init__(self):
-        self.translator = Translator()
         self.config = Config()
+        self.translator = Translator(self.config)
         self.is_processing = False
         self.translation_history = []
         self.key_buffer = []
@@ -32,13 +32,29 @@ class TextTranslatorApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.rowconfigure(2, weight=1)
 
         title_label = ttk.Label(main_frame, text="Text Translator & Fixer", font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
 
+        language_frame = ttk.Frame(main_frame)
+        language_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        language_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(language_frame, text="Idioma de destino:").grid(row=0, column=0, sticky=tk.W)
+        
+        self.language_var = tk.StringVar()
+        languages = list(self.config.get_available_languages().keys())
+        current_lang = self.config.get_target_language()
+        current_lang_display = next((k for k, v in self.config.get_available_languages().items() if v == current_lang), languages[0])
+        self.language_var.set(current_lang_display)
+        
+        self.language_combo = ttk.Combobox(language_frame, textvariable=self.language_var, values=languages, state="readonly", width=15)
+        self.language_combo.grid(row=0, column=1, sticky=tk.W, padx=(10, 0))
+        self.language_combo.bind('<<ComboboxSelected>>', self.on_language_change)
+
         status_frame = ttk.Frame(main_frame)
-        status_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        status_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         status_frame.columnconfigure(1, weight=1)
 
         ttk.Label(status_frame, text="Status:").grid(row=0, column=0, sticky=tk.W)
@@ -50,13 +66,13 @@ class TextTranslatorApp:
         commands_label.grid(row=1, column=1, sticky=tk.W, padx=(10, 0))
 
         history_label = ttk.Label(main_frame, text="Histórico", font=("Arial", 12, "bold"))
-        history_label.grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
+        history_label.grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
 
         self.history_text = scrolledtext.ScrolledText(main_frame, wrap=tk.WORD, height=20, width=70)
-        self.history_text.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        self.history_text.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
 
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E))
+        button_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E))
 
         ttk.Button(button_frame, text="Limpar Histórico", command=self.clear_history).pack(side=tk.LEFT)
         ttk.Button(button_frame, text="Configurar API Key", command=self.setup_api_key).pack(side=tk.LEFT, padx=(10, 0))
@@ -98,6 +114,16 @@ class TextTranslatorApp:
         self.translation_history.clear()
         self.update_history_display()
 
+    def on_language_change(self, event=None):
+        selected_display = self.language_var.get()
+        languages = self.config.get_available_languages()
+        print(f"Language changed to: {selected_display}")
+        if selected_display in languages:
+            language_code = languages[selected_display]
+            print(f"Setting language code: {language_code}")
+            self.config.set_target_language(language_code)
+            print(f"Current config language: {self.config.get_target_language()}")
+
     def setup_api_key(self):
         self.config.setup_api_key()
         self.check_configuration()
@@ -106,6 +132,10 @@ class TextTranslatorApp:
         if messagebox.askyesno("Confirmar", "Tem certeza que deseja limpar a configuração da API key?"):
             if self.config.clear_config():
                 self.check_configuration()
+                languages = list(self.config.get_available_languages().keys())
+                current_lang = self.config.get_target_language()
+                current_lang_display = next((k for k, v in self.config.get_available_languages().items() if v == current_lang), languages[0])
+                self.language_var.set(current_lang_display)
                 messagebox.showinfo("Sucesso", "Configuração limpa com sucesso!")
             else:
                 messagebox.showerror("Erro", "Erro ao limpar configuração.")
